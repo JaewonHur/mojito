@@ -111,7 +111,7 @@ class KoreaInvestment:
         res = requests.get(url, headers=headers, params=params)
         return res.json()
 
-    def create_limit_buy_order(self, acc_no: str, ticker: str, price: int, quantity: int) -> dict:
+    def create_limit_buy_order(self, acc_no: str, ticker: str, price: float, quantity: int) -> dict:
         """
 
         Args:
@@ -126,7 +126,11 @@ class KoreaInvestment:
         resp = self.create_oversea_order("buy", acc_no, ticker, price, quantity, "00")
         return resp
 
-    def create_limit_sell_order(self, acc_no: str, ticker: str, price: int, quantity: int) -> dict:
+    def create_loc_buy_order(self, acc_no: str, ticker: str, price: float, quantity: int) -> dict:
+        resp = self.create_oversea_order("buy", acc_no, ticker, price, quantity, "34")
+        return resp
+
+    def create_limit_sell_order(self, acc_no: str, ticker: str, price: float, quantity: int) -> dict:
         """
 
         Args:
@@ -142,7 +146,7 @@ class KoreaInvestment:
         return resp
 
     def cancel_order(self, acc_no: str, ticker: str, order_id: str,
-                     quantity: int) -> dict:
+                     price: str, quantity: int) -> dict:
         """
 
         Args:
@@ -156,7 +160,7 @@ class KoreaInvestment:
         Returns:
             _type_: _description_
         """
-        resp = self.update_oversea_order(acc_no, ticker, order_id, 0, quantity, False)
+        resp = self.update_oversea_order(acc_no, ticker, order_id, price, quantity, False)
         return resp
 
     def fetch_open_order(self, acc_no: str) -> dict:
@@ -191,7 +195,7 @@ class KoreaInvestment:
         resp = requests.get(url, headers=headers, params=params)
         return resp.json()
 
-    def create_oversea_order(self, side: str, acc_no: str, ticker: str, price: int,
+    def create_oversea_order(self, side: str, acc_no: str, ticker: str, price: float,
                              quantity: int, order_type: str) -> dict:
         """_summary_
 
@@ -237,14 +241,14 @@ class KoreaInvestment:
         return resp.json()
 
     def update_oversea_order(self, acc_no: str, ticker: str, order_id: str,
-                             price: int, quantity: int, is_change: bool = True):
+                             price: str, quantity: int, is_change: bool = True):
         """_summary_
 
         Args:
             acc_no (str): _description_
             ticker (str): _description_
             order_id (str): _description_
-            price (int): _description_
+            price (str): _description_
             quantity (int): _description_
             is_change (bool): _description_
 
@@ -262,7 +266,7 @@ class KoreaInvestment:
             "ORGN_ODNO": order_id,
             "RVSE_CNCL_DVSN_CD": param,
             "ORD_QTY": str(quantity),
-            "OVRS_ORD_UNPR": "",
+            "OVRS_ORD_UNPR": price,
             "CTAC_TLNO": "",
             "MGCO_APTM_ODNO": "",
             "ORD_SVR_DVSN_CD": "0"
