@@ -152,16 +152,6 @@ class KoreaInvestment:
         self.access_token = None
         self.issue_access_token()
 
-    def set_sandbox_mode(self, mode: bool = True):
-        """테스트(모의투자) 서버 사용 설정
-        Args:
-            mode (bool, optional): True: 테스트서버, False: 실서버 Defaults to True.
-        """
-        if mode:
-            self.base_url = "https://openapivts.koreainvestment.com:29443"
-        else:
-            self.base_url = "https://openapi.koreainvestment.com:9443"
-
     def issue_access_token(self):
         """접근토큰발급
         """
@@ -194,6 +184,8 @@ class KoreaInvestment:
         resp = requests.post(url, headers=headers, data=json.dumps(data))
         haskkey = resp.json()["HASH"]
         return haskkey
+
+################################################################################
 
     def fetch_price(self, ticker: str) -> dict:
         """해외주식 현재체결가
@@ -280,7 +272,8 @@ class KoreaInvestment:
         resp = self.create_oversea_order("sell", acc_no, ticker, price, quantity, "00")
         return resp
 
-    def cancel_order(self, acc_no: str, ticker: str, order_id: str, quantity: int):
+    def cancel_order(self, acc_no: str, ticker: str, order_id: str,
+                     quantity: int) -> dict:
         """주문 취소
 
         Args:
@@ -294,38 +287,41 @@ class KoreaInvestment:
         Returns:
             _type_: _description_
         """
-        resp = self.update_oversea_order(acc_no, ticker, order_id, 0, quantity)
+        resp = self.update_oversea_order(acc_no, ticker, order_id, 0, quantity, False)
         return resp
 
-
-    def modify_order(self, acc_no: str, ticker: str, order_id: str, price: int,
-                     quantity: int):
+    def fetch_open_order(self, acc_no: str) -> dict:
         """_summary_
 
         Args:
             acc_no (str): _description_
-            order_code (str): _description_
-            order_id (str): _description_
-            order_type (str): _description_
-            price (int): _description_
-            quantity (int): _description_
 
         Returns:
-            _type_: _description_
+            dict: _description_
         """
-        resp = self.update_oversea_order(acc_no, ticker, order_id, price, quantity)
-        return resp
+        path = "uapi/overseas-stock/v1/trading/inquire-nccs"
+        url = f"{self.base_url}/{path}"
 
-    def update_oversea_order(self, acc_no: str, ticker: str, order_id: str,
-                             price: int, quantity: int, is_change: bool = True):
-        return
+        headers = {
+            "content-type": "application/json",
+            "authorization": self.access_token,
+            "appKey": self.api_key,
+            "appSecret": self.api_secret,
+            "tr_id": "JTTT3018R"
+        }
 
-    def fetch_oversea_open_order(self, acc_no: str):
-        return
+        exchange_cd = EXCHANGE_CODE2[self.exchange]
+        params = {
+            "CANO": acc_no,
+            "ACNT_PRDT_CD": "01",
+            "OVRS_EXCG_CD": exchange_cd,
+            "SORT_SQN": "DS",
+            "CTX_AREA_FK200": "",
+            "CTX_AREA_NK200": ""
+        }
 
-    def fetch_oversea_closed_order(self, acc_no: str, ticker: str, strt: str,
-                                   end: str, side: str):
-        return
+        resp = requests.get(url, headers=headers, params=params)
+        return resp.json()
 
     def create_oversea_order(self, side: str, acc_no: str, ticker: str, price: int,
                              quantity: int, order_type: str) -> dict:
@@ -372,3 +368,49 @@ class KoreaInvestment:
         }
         resp = requests.post(url, headers=headers, data=json.dumps(data))
         return resp.json()
+
+    def update_oversea_order(self, acc_no: str, ticker: str, order_id: str,
+                             price: int, quantity: int, is_change: bool = True):
+        """_summary_
+
+        Args:
+            acc_no (str): _description_
+            ticker (str): _description_
+            order_id (str): _description_
+            price (int): _description_
+            quantity (int): _description_
+            is_change (bool): _description_
+
+        Returns:
+            dict: _desciption_
+        """
+        path = "uapi/overseas-stock/v1/trading/order-rvsecncl"
+        url = f"{self.base_url}/{path}"
+        param = "01" if is_change else "02"
+        exchange_cd = EXCHANGE_CODE2[self.exchange]
+        data = {
+            "CANO": acc_no,
+            "ACNT_PRDT_CD": "01",
+            "OVRS_EXCG_CD": exchange_cd,
+            "PDNO": ticker,
+            "ORGN_ODNO": order_id,
+            "RVSE_CNCL_DVSN_CD": param,
+            "ORD_QTY": str(quantity),
+            "OVRS_ORD_UNPR": "",
+            "CTAC_TLNO": "",
+            "MGCO_APTM_ODNO": "",
+            "ORD_SVR_DVSN_CD": "0"
+        }
+        hashkey = self.issue_hashkey(data)
+        headers = {
+            "content-type": "application/json",
+            "authorization": self.access_token,
+            "appKey": self.api_key,
+            "appSecret": self.api_secret,
+            "tr_id": "JTTT1004U",
+            "hashkey": hashkey
+        }
+
+        resp = requests.post(url, headers=headers, data=json.dumps(data))
+        return resp.json()
+
